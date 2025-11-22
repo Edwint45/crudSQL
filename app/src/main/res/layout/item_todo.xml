@@ -25,6 +25,16 @@
             android:text="Ejemplo de tarea"
             android:textColor="@android:color/black"/>
 
+        <!-- NUEVO: Botón de Editar -->
+        <ImageView
+            android:id="@+id/btnEdit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_edit"
+            android:contentDescription="Editar"
+            app:tint="#2196F3"
+            android:padding="8dp"/>
+
         <!-- Botón de eliminar -->
         <ImageView
             android:id="@+id/btnDelete"
@@ -32,7 +42,8 @@
             android:layout_height="wrap_content"
             android:src="@android:drawable/ic_delete"
             android:contentDescription="Eliminar"
-            app:tint="#F44336"/>
+            app:tint="#F44336"
+            android:padding="8dp"/>
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>

@@ -5,14 +5,6 @@
     android:orientation="vertical"
     android:padding="24dp">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Nueva Tarea"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="16dp"/>
-
     <EditText
         android:id="@+id/etNewTask"
         android:layout_width="match_parent"
