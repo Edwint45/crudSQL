@@ -1,104 +1,126 @@
 # TodoApp - Android (Kotlin + SQLite)
 
-Esta es una aplicación nativa de Android desarrollada en **Kotlin** que implementa un sistema **CRUD** (Create, Read, Update, Delete) básico para gestionar una lista de tareas pendientes.
-
-La persistencia de datos se maneja localmente utilizando **SQLite** nativo, sin librerías ORM externas como Room, para propósitos educativos y de ligereza.
+Esta aplicación es un gestor de tareas (TODO List) nativo para Android escrito en **Kotlin**. Implementa un ciclo completo **CRUD** (Crear, Leer, Actualizar, Eliminar) persistiendo los datos en una base de datos local **SQLite**.
 
 ---
 
-## 📋 Funcionalidades
+## 📂 Documentación Técnica Detallada
 
-1.  **Guardar (Create):** Permite agregar nuevas tareas mediante un botón flotante y un diálogo emergente.
-2.  **Leer (Read):** Muestra todas las tareas guardadas en una lista desplazable (`RecyclerView`).
-3.  **Editar (Update):** Permite modificar el texto de una tarea existente pulsando el icono de lápiz.
-4.  **Eliminar (Delete):** Permite borrar tareas de la base de datos permanentemente pulsando el icono de basura.
+A continuación se detalla la función de cada clase y método dentro del proyecto.
 
----
+### 1. Modelo de Datos (`Todo.kt`)
+Este archivo define la estructura de la información.
 
-## 📂 Estructura del Proyecto y Documentación
-
-A continuación se explica qué hace cada archivo y por qué es necesario.
-
-### 1. Modelo de Datos
-#### `Todo.kt`
-Es la representación de objeto de una fila de la base de datos.
-*   **Función:** Es una `data class` simple.
-*   **Propiedades:**
-    *   `id`: Identificador único (necesario para encontrar qué fila editar o borrar).
-    *   `task`: El texto (String) de la tarea.
-
-### 2. Base de Datos
-#### `DatabaseHelper.kt`
-Esta clase maneja toda la comunicación con SQLite. Hereda de `SQLiteOpenHelper`.
-
-*   **`onCreate()`:** Se ejecuta una sola vez cuando la app se instala. Aquí se ejecuta el comando SQL `CREATE TABLE`.
-*   **`addTodo(task)`:** Recibe un texto, crea un `ContentValues` y hace un `INSERT` en la tabla.
-*   **`getAllTodos()`:** Hace una consulta `SELECT *`, recorre el cursor (el iterador de resultados) fila por fila, convierte los datos en objetos `Todo` y devuelve una `List<Todo>`.
-*   **`updateTodo(id, newTask)`:** Recibe el ID y el nuevo texto. Ejecuta un `UPDATE` buscando la fila por su ID.
-*   **`deleteTodo(id)`:** Ejecuta un comando `DELETE` donde el ID coincida con el seleccionado.
-
-### 3. Interfaz de Usuario (Vistas XML)
-Los archivos de diseño definen cómo se ve la app.
-
-*   **`activity_main.xml`:**
-    *   Es la pantalla principal.
-    *   Contiene el `RecyclerView` (la lista vacía que se llenará dinámicamente).
-    *   Contiene el `FloatingActionButton` (el botón flotante "+" en la esquina).
-*   **`item_todo.xml`:**
-    *   Define el diseño de **una sola fila** de la lista.
-    *   Usa un `CardView` para dar efecto de tarjeta.
-    *   Contiene el `TextView` (texto de la tarea) y dos `ImageView` (botones de editar y borrar).
-*   **`dialog_add_todo.xml`:**
-    *   Es el diseño del cuadro de diálogo emergente.
-    *   Contiene un `EditText` donde el usuario escribe o edita la tarea. Se reutiliza tanto para crear como para editar.
-
-### 4. Adaptador
-#### `TodoAdapter.kt`
-Es el intermediario entre la base de datos (la lista de objetos `Todo`) y la vista (`RecyclerView`).
-
-*   **`onCreateViewHolder`:** "Infla" (convierte) el archivo `item_todo.xml` en una vista real de Android.
-*   **`onBindViewHolder`:** Asigna los datos a cada fila.
-    *   Pone el texto del objeto `Todo` en el `TextView`.
-    *   **Configura los Clicks:** Aquí se definen los "listeners". Cuando tocas el botón editar o borrar, el adaptador no borra nada directamente, sino que avisa a la `MainActivity` a través de una *función lambda*.
-*   **`refreshData`:** Método auxiliar para recibir una lista nueva de la base de datos y avisar a la vista que debe repintarse.
-
-### 5. Lógica Principal
-#### `MainActivity.kt`
-Es el punto de entrada de la aplicación y conecta todos los componentes.
-
-1.  **Inicialización:** Crea la instancia de `DatabaseHelper` y configura el `RecyclerView`.
-2.  **Configuración del Adaptador:** Instancia el `TodoAdapter` pasándole dos funciones lógicas:
-    *   *Qué hacer al editar:* Llama a `showEditDialog`.
-    *   *Qué hacer al borrar:* Llama a `deleteTask`.
-3.  **Manejo de Diálogos (`AlertDialog`):**
-    *   `showAddDialog()`: Muestra el popup vacío para guardar. Llama a `dbHelper.addTodo`.
-    *   `showEditDialog()`: Muestra el popup pero precarga el texto actual de la tarea en el input. Llama a `dbHelper.updateTodo`.
-4.  **Actualización de UI:** Después de cada operación (guardar, editar, borrar), se llama a `todoAdapter.refreshData(dbHelper.getAllTodos())` para que la lista en pantalla refleje los cambios de la base de datos inmediatamente.
+*   **`data class Todo(val id: Int, val task: String)`**
+    *   **Qué hace:** Es un contenedor de datos inmutable.
+    *   **Cómo funciona:** Al ser una `data class`, Kotlin genera automáticamente métodos útiles como `toString()` o `equals()`.
+    *   **`id`:** Es la clave primaria de la base de datos. Se necesita para identificar qué fila específica queremos borrar o editar.
+    *   **`task`:** Es el contenido de texto que el usuario escribió.
 
 ---
 
-## 🚀 Flujo de Ejecución
+### 2. Controlador de Base de Datos (`DatabaseHelper.kt`)
+Esta clase gestiona toda la interacción SQL. Hereda de `SQLiteOpenHelper`, que es la clase estándar de Android para gestión de bases de datos.
 
-1.  La app inicia (`onCreate`).
-2.  Se piden todos los datos a SQLite (`getAllTodos`).
-3.  Se pasan al Adaptador y se muestran en pantalla.
-4.  **Si el usuario agrega:**
-    *   Clic en FAB -> Diálogo -> Escribir -> Guardar -> `INSERT` en SQL -> Refrescar lista.
-5.  **Si el usuario edita:**
-    *   Clic en Lápiz -> Diálogo (con texto) -> Modificar -> Actualizar -> `UPDATE` en SQL -> Refrescar lista.
-6.  **Si el usuario borra:**
-    *   Clic en Basura -> `DELETE` en SQL -> Refrescar lista.
+#### Métodos del Ciclo de Vida
+*   **`onCreate(db: SQLiteDatabase)`**
+    *   **Cuándo se ejecuta:** Solo una vez, cuando la aplicación se instala o se abre por primera vez y la base de datos no existe.
+    *   **Qué hace:** Ejecuta el comando SQL `CREATE TABLE todos (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT)`. Esto crea la estructura física donde se guardarán los datos.
+*   **`onUpgrade(db, oldVersion, newVersion)`**
+    *   **Cuándo se ejecuta:** Si cambias la constante `DATABASE_VERSION` en el código.
+    *   **Qué hace:** Elimina la tabla existente (`DROP TABLE`) y llama a `onCreate` para recrearla de nuevo. Es útil para migraciones de esquema.
+
+#### Métodos CRUD (Operaciones)
+*   **`addTodo(task: String): Long`**
+    *   **Propósito:** Guardar una nueva tarea.
+    *   **Cómo funciona:**
+        1.  Obtiene la base de datos en modo escritura (`writableDatabase`).
+        2.  Usa `ContentValues` (un mapa de clave-valor) para emparejar el nombre de la columna (`task`) con el texto recibido.
+        3.  Ejecuta `db.insert()`.
+    *   **Retorno:** Devuelve el ID de la fila insertada o -1 si hubo error.
+
+*   **`getAllTodos(): List<Todo>`**
+    *   **Propósito:** Leer todas las tareas para mostrarlas en la lista.
+    *   **Cómo funciona:**
+        1.  Obtiene la base de datos en modo lectura (`readableDatabase`).
+        2.  Ejecuta `rawQuery("SELECT * FROM todos", null)`. Esto devuelve un objeto `Cursor` (un puntero que recorre los resultados).
+        3.  Usa un bucle `while (cursor.moveToNext())` para ir fila por fila.
+        4.  En cada vuelta, extrae el `Int` del ID y el `String` de la tarea, crea un objeto `Todo` y lo añade a una lista `ArrayList`.
+    *   **Retorno:** Una lista completa de objetos `Todo`.
+
+*   **`updateTodo(id: Int, newTask: String): Int`**
+    *   **Propósito:** Modificar el texto de una tarea existente.
+    *   **Cómo funciona:**
+        1.  Prepara un `ContentValues` con el nuevo texto.
+        2.  Ejecuta `db.update()`.
+        3.  **Clave:** Usa la cláusula `WHERE id = ?` para asegurarse de que solo se modifique la fila que tiene ese ID específico.
+
+*   **`deleteTodo(id: Int)`**
+    *   **Propósito:** Eliminar una tarea.
+    *   **Cómo funciona:** Ejecuta `db.delete()` buscando la fila donde el ID coincida con el parámetro recibido.
 
 ---
 
-## 📦 Requisitos (Dependencies)
+### 3. Adaptador de Lista (`TodoAdapter.kt`)
+El `RecyclerView` no sabe cómo mostrar datos por sí mismo. Este adaptador actúa como puente entre la lista de datos (`List<Todo>`) y el diseño XML (`item_todo.xml`).
 
-Para que el XML funcione correctamente, asegúrate de tener estas dependencias estándar en tu `build.gradle` (Module: app):
+*   **Constructor:** Recibe la lista de datos y dos funciones "Lambda" (`onEditClick`, `onDeleteClick`). Estas funciones permiten que el adaptador "avise" a la Activity cuando el usuario toca un botón, sin que el adaptador tenga que saber de bases de datos.
 
-```groovy
-dependencies {
-    implementation("androidx.core:core-ktx:1.x.x")
-    implementation("androidx.appcompat:appcompat:1.x.x")
-    implementation("com.google.android.material:material:1.x.x") // Para FloatingActionButton y CardView
-    implementation("androidx.constraintlayout:constraintlayout:2.x.x")
-}
+*   **Clase Interna `TodoViewHolder`**
+    *   **Qué hace:** Guarda las referencias a los elementos visuales (El texto `tvTask`, el botón `btnEdit`, el botón `btnDelete`) para no tener que buscarlos (`findViewById`) cada vez que se hace scroll, optimizando el rendimiento.
+
+*   **`onCreateViewHolder(...)`**
+    *   **Qué hace:** "Infla" el diseño. Toma el archivo XML `item_todo.xml` y lo convierte en objetos View de Java/Kotlin en memoria. Se ejecuta solo unas pocas veces (las suficientes para llenar la pantalla).
+
+*   **`onBindViewHolder(holder, position)`**
+    *   **Qué hace:** Se ejecuta **constantemente** mientras haces scroll.
+    *   **Funcionamiento:**
+        1.  Toma el objeto `Todo` de la posición actual.
+        2.  Pone el texto en el `TextView`.
+        3.  Asigna los "Listeners" (clics) a los botones.
+        4.  Cuando se hace click en Editar, ejecuta `onEditClick(todo)`, pasando el objeto completo.
+        5.  Cuando se hace click en Borrar, ejecuta `onDeleteClick(todo.id)`, pasando solo el ID.
+
+*   **`refreshData(newList: List<Todo>)`**
+    *   **Qué hace:** Actualiza la lista interna del adaptador con nuevos datos traídos de la BD y llama a `notifyDataSetChanged()`. Esto obliga a la pantalla a redibujarse para mostrar los cambios.
+
+---
+
+### 4. Actividad Principal (`MainActivity.kt`)
+Es el "cerebro" de la pantalla. Coordina la BD, el Adaptador y los Diálogos.
+
+*   **`onCreate()`**
+    *   **Inicialización:** Configura el `RecyclerView` y crea la instancia de `DatabaseHelper`.
+    *   **Configuración del Adaptador:** Aquí se define **qué pasa** cuando el adaptador reporta un clic.
+        *   Si es *Editar* -> Llama a `showEditDialog`.
+        *   Si es *Borrar* -> Llama a `deleteTask`.
+    *   **Botón Flotante (FAB):** Configura el clic del botón "+" para llamar a `showAddDialog`.
+
+*   **`showAddDialog()`**
+    *   **Qué hace:** Crea y muestra una ventana emergente (`AlertDialog`) con un campo de texto vacío.
+    *   **Lógica:** Al pulsar "Guardar", valida que el texto no esté vacío y llama a `addTask`.
+
+*   **`showEditDialog(todo: Todo)`**
+    *   **Qué hace:** Muestra el mismo diseño de diálogo, pero **precarga** la información.
+    *   **Detalle:** `etTask.setText(todo.task)` coloca el texto actual de la tarea en el input para que el usuario lo corrija en lugar de escribirlo desde cero.
+    *   **Lógica:** Al pulsar "Actualizar", llama a `updateTask` pasando el ID original y el texto modificado.
+
+*   **`addTask(task: String)`**
+    *   Llama al método `addTodo` de la base de datos.
+    *   Si tiene éxito, llama a `todoAdapter.refreshData` obteniendo la lista nueva (`dbHelper.getAllTodos()`). Esto hace que la nueva tarea aparezca instantáneamente.
+
+*   **`updateTask(id: Int, newTask: String)`**
+    *   Llama al método `updateTodo` de la base de datos.
+    *   Refresca el adaptador para que el cambio de texto se vea en la lista.
+
+*   **`deleteTask(id: Int)`**
+    *   Llama al método `deleteTodo` de la base de datos usando el ID.
+    *   Refresca el adaptador. La tarea desaparece visualmente de la lista.
+
+---
+
+## 🎨 Archivos XML (Vistas)
+
+*   `activity_main.xml`: Contenedor principal (`ConstraintLayout`). Define la posición de la lista (`RecyclerView`) y fija el botón flotante en la esquina inferior derecha.
+*   `item_todo.xml`: Define la estética de cada fila. Usa `LinearLayout` horizontal para alinear: [Texto ... Botón Editar ... Botón Borrar].
+*   `dialog_add_todo.xml`: Es el contenido interno de las ventanas emergentes. Solo contiene un título y un `EditText`.
